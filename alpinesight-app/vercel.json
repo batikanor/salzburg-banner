@@ -3,5 +3,10 @@
     "api/**": {
       "excludeFiles": "{.next,.git,node_modules}/**"
     }
+  },
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
   }
 }
