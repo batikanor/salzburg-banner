@@ -31,12 +31,33 @@ def stream_text(
 
         yield format_sse({"type": "start", "messageId": message_id})
 
-        stream = client.chat.completions.create(
-            messages=messages,
-            model=model,
-            stream=True,
-            tools=tool_definitions,
-        )
+        try:
+            stream = client.chat.completions.create(
+                messages=messages,
+                model=model,
+                stream=True,
+                tools=tool_definitions,
+            )
+        except Exception as error:
+            # Send error to frontend
+            error_msg = str(error)
+            if "429" in error_msg or "rate-limited" in error_msg.lower():
+                yield format_sse({
+                    "type": "error",
+                    "error": "Rate limit reached. Please wait a moment or try a different model."
+                })
+            elif "401" in error_msg or "unauthorized" in error_msg.lower():
+                yield format_sse({
+                    "type": "error",
+                    "error": "API key error. Please check your configuration."
+                })
+            else:
+                yield format_sse({
+                    "type": "error",
+                    "error": f"Model error: {error_msg}"
+                })
+            yield "data: [DONE]\n\n"
+            return
 
         for chunk in stream:
             for choice in chunk.choices:

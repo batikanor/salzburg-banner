@@ -31,13 +31,13 @@ def get_openai_client():
         return OpenAI(
             api_key=oidc.get_vercel_oidc_token(),
             base_url="https://ai-gateway.vercel.sh/v1"
-        ), "gpt-5-nano"
+        ), "google/gemini-2.0-flash-exp:free"
 
     # For local development, prefer OpenRouter
     openrouter_key = os.environ.get("OPENROUTER_API_KEY")
     if openrouter_key:
-        # OpenRouter uses model prefixes like "openai/gpt-5-nano"
-        model = os.environ.get("MODEL_NAME", "openai/gpt-5-nano")
+        # Default to Gemini 2.0 Flash (free and fast)
+        model = os.environ.get("MODEL_NAME", "google/gemini-2.0-flash-exp:free")
         return OpenAI(
             api_key=openrouter_key,
             base_url="https://openrouter.ai/api/v1"
@@ -46,7 +46,7 @@ def get_openai_client():
     # Fallback to regular OpenAI
     openai_key = os.environ.get("OPENAI_API_KEY")
     if openai_key:
-        model = os.environ.get("MODEL_NAME", "gpt-5-nano")
+        model = os.environ.get("MODEL_NAME", "gpt-4o-mini")
         return OpenAI(api_key=openai_key), model
 
     raise ValueError(
@@ -57,6 +57,7 @@ def get_openai_client():
 
 class Request(BaseModel):
     messages: List[ClientMessage]
+    model: str | None = None
 
 
 @app.post("/api/chat")
@@ -64,7 +65,14 @@ async def handle_chat_data(request: Request, protocol: str = Query('data')):
     messages = request.messages
     openai_messages = convert_to_openai_messages(messages)
 
+    # Get model from request or use default
+    requested_model = request.model
     client, model = get_openai_client()
+
+    # Override with requested model if provided
+    if requested_model:
+        model = requested_model
+
     response = StreamingResponse(
         stream_text(client, openai_messages, TOOL_DEFINITIONS, AVAILABLE_TOOLS, protocol, model),
         media_type="text/event-stream",

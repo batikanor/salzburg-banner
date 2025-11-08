@@ -8,6 +8,7 @@ import { Markdown } from "./markdown";
 import { PreviewAttachment } from "./preview-attachment";
 import { cn } from "@/lib/utils";
 import { Weather } from "./weather";
+import { ToolResult } from "./tool-result";
 
 export const PreviewMessage = ({
   message,
@@ -49,32 +50,34 @@ export const PreviewMessage = ({
                 const { toolCallId, state, output } = part;
                 const toolName = part.type.replace("tool-", "");
 
+                // Show tool outputs with appropriate components
                 if (state === "output-available" && output) {
-                  return (
-                    <div key={toolCallId}>
-                      {toolName === "get_current_weather" ? (
+                  if (toolName === "get_current_weather") {
+                    return (
+                      <div key={toolCallId}>
                         <Weather weatherAtLocation={output} />
-                      ) : (
-                        <pre>{JSON.stringify(output, null, 2)}</pre>
-                      )}
-                    </div>
-                  );
+                      </div>
+                    );
+                  }
+                  if (toolName === "show_location_on_globe" || toolName === "close_globe") {
+                    return (
+                      <div key={toolCallId}>
+                        <ToolResult result={output} />
+                      </div>
+                    );
+                  }
                 }
                 // Show loading state while tool is executing
                 if (
-                  state === "input-streaming" ||
-                  state === "input-available"
+                  state === "input-streaming" || state === "input-available"
                 ) {
-                  return (
-                    <div
-                      key={toolCallId}
-                      className={cn({
-                        skeleton: ["get_current_weather"].includes(toolName),
-                      })}
-                    >
-                      {toolName === "get_current_weather" ? <Weather /> : null}
-                    </div>
-                  );
+                  if (toolName === "get_current_weather") {
+                    return (
+                      <div key={toolCallId} className="skeleton">
+                        <Weather />
+                      </div>
+                    );
+                  }
                 }
               }
               if (part.type === "file") {

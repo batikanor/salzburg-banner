@@ -27,14 +27,19 @@ import { Textarea } from "./ui/textarea";
 
 const suggestedActions = [
   {
+    title: "Show me",
+    label: "the Eiffel Tower",
+    action: "Show me the Eiffel Tower on the map",
+  },
+  {
     title: "What is the weather",
     label: "in San Francisco?",
     action: "What is the weather in San Francisco?",
   },
   {
-    title: "How is python useful",
-    label: "for AI engineers?",
-    action: "How is python useful for AI engineers?",
+    title: "Find",
+    label: "Mount Everest",
+    action: "Find Mount Everest",
   },
 ];
 
@@ -46,7 +51,6 @@ export function MultimodalInput({
   stop,
   messages,
   setMessages,
-  sendMessage,
   handleSubmit,
   className,
 }: {
@@ -57,7 +61,6 @@ export function MultimodalInput({
   stop: () => void;
   messages: Array<UIMessage>;
   setMessages: Dispatch<SetStateAction<Array<UIMessage>>>;
-  sendMessage: UseChatHelpers<UIMessage>['sendMessage']
   handleSubmit: (
     event?: {
       preventDefault?: () => void;
@@ -134,16 +137,12 @@ export function MultimodalInput({
             >
               <Button
                 variant="ghost"
-                onClick={async () => {
-                  sendMessage({
-                    role: "user",
-                    parts: [
-                      {
-                        type: "text",
-                        text: suggestedAction.action,
-                      },
-                    ],
-                  });
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setInput(suggestedAction.action);
+                  // Trigger submit after a brief delay to ensure input is set
+                  setTimeout(() => handleSubmit(), 10);
                 }}
                 className="text-left border rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-auto justify-start items-start"
               >

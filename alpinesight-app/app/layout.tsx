@@ -3,15 +3,17 @@ import { GeistSans } from "geist/font/sans";
 import { Toaster } from "sonner";
 import { cn } from "@/lib/utils";
 import { Navbar } from "@/components/navbar";
+import { GlobeProvider } from "@/contexts/globe-context";
+import { LayoutWrapper } from "@/components/layout-wrapper";
 
 export const metadata = {
-  title: "AI SDK Python Streaming Preview",
+  title: "Alpinesight - Interactive Globe Chat",
   description:
-    "Use the Data Stream Protocol to stream chat completions from a Python endpoint (FastAPI) and display them using the useChat hook in your Next.js application.",
+    "Chat with AI while exploring an interactive 3D globe. Built with FastAPI and Next.js.",
   openGraph: {
     images: [
       {
-        url: "/og?title=AI SDK Python Streaming Preview",
+        url: "/og?title=Alpinesight",
       },
     ],
   },
@@ -19,7 +21,7 @@ export const metadata = {
     card: "summary_large_image",
     images: [
       {
-        url: "/og?title=AI SDK Python Streaming Preview",
+        url: "/og?title=Alpinesight",
       },
     ],
   },
@@ -34,9 +36,11 @@ export default function RootLayout({
     <html lang="en">
       <head></head>
       <body className={cn(GeistSans.className, "antialiased dark")}>
-        <Toaster position="top-center" richColors />
-        <Navbar />
-        {children}
+        <GlobeProvider>
+          <Toaster position="top-center" richColors />
+          <Navbar />
+          <LayoutWrapper>{children}</LayoutWrapper>
+        </GlobeProvider>
       </body>
     </html>
   );
