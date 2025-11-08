@@ -31,13 +31,13 @@ def get_openai_client():
         return OpenAI(
             api_key=oidc.get_vercel_oidc_token(),
             base_url="https://ai-gateway.vercel.sh/v1"
-        ), "gpt-4o-mini"
+        ), "gpt-5-nano"
 
     # For local development, prefer OpenRouter
     openrouter_key = os.environ.get("OPENROUTER_API_KEY")
     if openrouter_key:
-        # OpenRouter uses model prefixes like "openai/gpt-4o-mini"
-        model = os.environ.get("MODEL_NAME", "openai/gpt-4o-mini")
+        # OpenRouter uses model prefixes like "openai/gpt-5-nano"
+        model = os.environ.get("MODEL_NAME", "openai/gpt-5-nano")
         return OpenAI(
             api_key=openrouter_key,
             base_url="https://openrouter.ai/api/v1"
@@ -46,7 +46,7 @@ def get_openai_client():
     # Fallback to regular OpenAI
     openai_key = os.environ.get("OPENAI_API_KEY")
     if openai_key:
-        model = os.environ.get("MODEL_NAME", "gpt-4o-mini")
+        model = os.environ.get("MODEL_NAME", "gpt-5-nano")
         return OpenAI(api_key=openai_key), model
 
     raise ValueError(
