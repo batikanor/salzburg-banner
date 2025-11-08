@@ -1,20 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGlobe } from "@/contexts/globe-context";
-import type { GlobeMethods } from "react-globe.gl";
+import GlobeGl from "react-globe.gl";
 
-// Dynamically import Globe to avoid SSR issues
-const Globe = dynamic(() => import("react-globe.gl"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex items-center justify-center w-full h-full">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
-    </div>
-  ),
-});
+// Type-safe Globe component
+const Globe = GlobeGl as any;
 
 interface GlobeModalProps {
   isOpen: boolean;
@@ -28,28 +20,44 @@ const markerSvg = `<svg viewBox="-4 0 36 36">
 </svg>`;
 
 export function GlobeModal({ isOpen, onClose }: GlobeModalProps) {
-  const globeEl = useRef<GlobeMethods>();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const globeInstanceRef = useRef<any>(null);
   const [globeReady, setGlobeReady] = useState(false);
   const { markers, pointOfView } = useGlobe();
 
+  // Store the camera position as state that we pass as props to Globe
+  const [cameraPov, setCameraPov] = useState({ lat: 20, lng: 0, altitude: 2.5 });
+
   // Handle camera movement when pointOfView changes
   useEffect(() => {
-    if (globeReady && globeEl.current && pointOfView) {
-      const globe = globeEl.current;
+    if (pointOfView && globeInstanceRef.current) {
       console.log("🌍 Flying to location:", pointOfView);
-      console.log("🌍 Globe element exists:", !!globeEl.current);
+      const globe = globeInstanceRef.current;
 
-      // Disable auto-rotate when flying to a location
-      globe.controls().autoRotate = false;
+      console.log("🌍 Globe ref type:", typeof globe);
+      console.log("🌍 Globe has pointOfView method:", typeof globe.pointOfView);
+      console.log("🌍 Globe has controls method:", typeof globe.controls);
 
-      // Smooth transition to new point of view (duration in ms)
-      globe.pointOfView(pointOfView, 3000); // 3 second smooth transition
+      try {
+        // Try to call pointOfView method
+        if (typeof globe.pointOfView === 'function') {
+          globe.pointOfView(pointOfView, 3000);
+          console.log("🌍 ✅ pointOfView() called successfully!");
+        }
 
-      console.log("🌍 Camera animation started");
-    } else {
-      console.log("🌍 Cannot fly - globeReady:", globeReady, "globe:", !!globeEl.current, "pov:", pointOfView);
+        // Try to disable auto-rotate
+        if (typeof globe.controls === 'function') {
+          const controls = globe.controls();
+          if (controls) {
+            controls.autoRotate = false;
+            console.log("🌍 ✅ Auto-rotate disabled!");
+          }
+        }
+      } catch (e) {
+        console.log("🌍 ❌ Error:", e);
+      }
     }
-  }, [pointOfView, globeReady]);
+  }, [pointOfView]);
 
   // Handle ESC key to close panel
   useEffect(() => {
@@ -61,16 +69,17 @@ export function GlobeModal({ isOpen, onClose }: GlobeModalProps) {
   }, [onClose]);
 
   return (
-    <AnimatePresence mode="wait">
-      {isOpen ? (
-        <motion.div
-          key="globe-modal"
-          initial={{ x: "-100%" }}
-          animate={{ x: 0 }}
-          exit={{ x: "-100%" }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="absolute left-0 top-0 bottom-0 w-[80%] z-30 bg-gradient-to-br from-slate-950 via-slate-900 to-black shadow-2xl border-r border-white/10"
-        >
+    <>
+      <AnimatePresence mode="wait">
+        {isOpen && (
+          <motion.div
+            key="globe-modal"
+            initial={{ x: "-100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "-100%" }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="absolute left-0 top-0 bottom-0 w-[80%] z-30 bg-gradient-to-br from-slate-950 via-slate-900 to-black shadow-2xl border-r border-white/10"
+          >
           {/* Close button */}
           <button
             onClick={onClose}
@@ -114,9 +123,16 @@ export function GlobeModal({ isOpen, onClose }: GlobeModalProps) {
           </div>
 
           {/* Globe container */}
-          <div className="w-full h-full overflow-hidden">
+          <div ref={containerRef} className="w-full h-full overflow-hidden">
             <Globe
-              ref={globeEl}
+              ref={(ref: any) => {
+                if (ref) {
+                  console.log("🌍 Ref callback fired with:", ref);
+                  console.log("🌍 Ref has pointOfView:", typeof ref.pointOfView);
+                  console.log("🌍 Ref has controls:", typeof ref.controls);
+                  globeInstanceRef.current = ref;
+                }
+              }}
               globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
               bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
               // Markers
@@ -140,22 +156,27 @@ export function GlobeModal({ isOpen, onClose }: GlobeModalProps) {
               tileHeight={1}
               tileLat={(d: any) => d.lat}
               tileLng={(d: any) => d.lng}
-              tileColor={() => 'rgba(255, 255, 255, 0.1)'}
               // Custom tile URL using OpenStreetMap
               globeTileEngineUrl={(x: number, y: number, l: number) =>
                 `https://tile.openstreetmap.org/${l}/${x}/${y}.png`
               }
               animateIn={true}
               waitForGlobeReady={true}
-              onGlobeReady={() => {
-                console.log("🌍 Globe is ready! Ref:", !!globeEl.current);
-                // Setup initial camera and controls
-                if (globeEl.current) {
-                  globeEl.current.controls().autoRotate = true;
-                  globeEl.current.controls().autoRotateSpeed = 0.5;
-                  globeEl.current.pointOfView({ lat: 20, lng: 0, altitude: 2.5 });
-                  console.log("🌍 Globe ref captured successfully");
-                }
+              onGlobeReady={function(this: any) {
+                console.log("🌍 Globe is ready! Checking for camera control methods...");
+
+                // The globe instance is passed as 'this' in the callback
+                globeInstanceRef.current = this;
+
+                // Scene exists as an object - let's explore it
+                console.log("🌍 Scene object:", this.scene);
+                console.log("🌍 Scene keys:", Object.keys(this.scene || {}).slice(0, 20));
+
+                // Check all properties on 'this' for camera-related stuff
+                const allProps = Object.getOwnPropertyNames(this);
+                const cameraProps = allProps.filter(p => p.toLowerCase().includes('camera') || p.toLowerCase().includes('control') || p.toLowerCase().includes('pov'));
+                console.log("🌍 Camera-related props:", cameraProps);
+
                 setGlobeReady(true);
               }}
             />
@@ -171,7 +192,8 @@ export function GlobeModal({ isOpen, onClose }: GlobeModalProps) {
             </div>
           )}
         </motion.div>
-      ) : null}
-    </AnimatePresence>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
