@@ -38,3 +38,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Jetbrains IDE
+.idea/
+
+# Mac
+.DS_STORE
