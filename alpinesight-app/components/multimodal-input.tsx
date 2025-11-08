@@ -32,11 +32,6 @@ const suggestedActions = [
     action: "Show me the Eiffel Tower on the map",
   },
   {
-    title: "What is the weather",
-    label: "in San Francisco?",
-    action: "What is the weather in San Francisco?",
-  },
-  {
     title: "Find",
     label: "Mount Everest",
     action: "Find Mount Everest",
@@ -44,7 +39,6 @@ const suggestedActions = [
 ];
 
 export function MultimodalInput({
-  chatId,
   input,
   setInput,
   isLoading,
