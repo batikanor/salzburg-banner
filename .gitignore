@@ -4,3 +4,4 @@ alpinesight-app/api/utils/object_detection/yolov8s.pt
 test_data/annotated_anything.png
 test_data/sat_1_yolo11s_annotated.png
 test_data/sat_1.png
+test_data/.DS_Store
