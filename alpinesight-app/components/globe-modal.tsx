@@ -8,6 +8,9 @@ import GlobeGl from "react-globe.gl";
 // Type-safe Globe component
 const Globe = GlobeGl as any;
 
+// Type fix for framer-motion v11 AnimatePresence
+const FixedAnimatePresence = AnimatePresence as any;
+
 interface GlobeModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -24,9 +27,6 @@ export function GlobeModal({ isOpen, onClose }: GlobeModalProps) {
   const globeInstanceRef = useRef<any>(null);
   const [globeReady, setGlobeReady] = useState(false);
   const { markers, pointOfView } = useGlobe();
-
-  // Store the camera position as state that we pass as props to Globe
-  const [cameraPov, setCameraPov] = useState({ lat: 20, lng: 0, altitude: 2.5 });
 
   // Handle camera movement when pointOfView changes
   useEffect(() => {
@@ -69,17 +69,16 @@ export function GlobeModal({ isOpen, onClose }: GlobeModalProps) {
   }, [onClose]);
 
   return (
-    <>
-      <AnimatePresence mode="wait">
-        {isOpen && (
-          <motion.div
-            key="globe-modal"
-            initial={{ x: "-100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "-100%" }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="absolute left-0 top-0 bottom-0 w-[80%] z-30 bg-gradient-to-br from-slate-950 via-slate-900 to-black shadow-2xl border-r border-white/10"
-          >
+    <FixedAnimatePresence mode="wait">
+      {isOpen && (
+        <motion.div
+          key="globe-modal"
+          initial={{ x: "-100%" }}
+          animate={{ x: 0 }}
+          exit={{ x: "-100%" }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          className="absolute left-0 top-0 bottom-0 w-[80%] z-30 bg-gradient-to-br from-slate-950 via-slate-900 to-black shadow-2xl border-r border-white/10"
+        >
           {/* Close button */}
           <button
             onClick={onClose}
@@ -181,8 +180,7 @@ export function GlobeModal({ isOpen, onClose }: GlobeModalProps) {
             </div>
           )}
         </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+      )}
+    </FixedAnimatePresence>
   );
 }

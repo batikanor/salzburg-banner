@@ -1,8 +1,13 @@
 "use client";
 
 import { useGlobe } from "@/contexts/globe-context";
-import { GlobeModal } from "./globe-modal";
 import { motion } from "framer-motion";
+import dynamic from "next/dynamic";
+
+// Dynamically import GlobeModal to avoid SSR issues with react-globe.gl
+const GlobeModal = dynamic(() => import("./globe-modal").then(mod => ({ default: mod.GlobeModal })), {
+  ssr: false,
+});
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const { isGlobeOpen, setIsGlobeOpen } = useGlobe();
