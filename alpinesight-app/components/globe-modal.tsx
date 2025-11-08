@@ -4,17 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGlobe } from "@/contexts/globe-context";
+import type { GlobeMethods } from "react-globe.gl";
 
 // Dynamically import Globe to avoid SSR issues
-// Use forwardRef: true to properly handle refs with dynamic imports
-const Globe = dynamic(() => import("react-globe.gl").then(mod => mod.default), {
+const Globe = dynamic(() => import("react-globe.gl"), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center w-full h-full">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
     </div>
   ),
-}) as any;
+});
 
 interface GlobeModalProps {
   isOpen: boolean;
@@ -28,7 +28,7 @@ const markerSvg = `<svg viewBox="-4 0 36 36">
 </svg>`;
 
 export function GlobeModal({ isOpen, onClose }: GlobeModalProps) {
-  const globeEl = useRef<any>(null);
+  const globeEl = useRef<GlobeMethods>();
   const [globeReady, setGlobeReady] = useState(false);
   const { markers, pointOfView } = useGlobe();
 
@@ -61,9 +61,10 @@ export function GlobeModal({ isOpen, onClose }: GlobeModalProps) {
   }, [onClose]);
 
   return (
-    <AnimatePresence>
-      {isOpen && (
+    <AnimatePresence mode="wait">
+      {isOpen ? (
         <motion.div
+          key="globe-modal"
           initial={{ x: "-100%" }}
           animate={{ x: 0 }}
           exit={{ x: "-100%" }}
@@ -170,7 +171,7 @@ export function GlobeModal({ isOpen, onClose }: GlobeModalProps) {
             </div>
           )}
         </motion.div>
-      )}
+      ) : null}
     </AnimatePresence>
   );
 }
