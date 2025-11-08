@@ -1,0 +1,6 @@
+alpinesight-app/api/utils/object_detection/yolo11s.pt
+alpinesight-app/api/utils/object_detection/yolov8n.pt
+alpinesight-app/api/utils/object_detection/yolov8s.pt
+test_data/annotated_anything.png
+test_data/sat_1_yolo11s_annotated.png
+test_data/sat_1.png
