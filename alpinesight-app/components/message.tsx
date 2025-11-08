@@ -18,9 +18,16 @@ export const PreviewMessage = ({
   message: UIMessage;
   isLoading: boolean;
 }) => {
+  const parts = message.parts || [];
+  const hasToolParts = parts.some((p: any) => p.type?.startsWith("tool-"));
+
   // Determine if this message will actually render any visible content
-  const hasRenderableParts = (message.parts || []).some((part: any) => {
-    if (part.type === "text" && part.text && part.text.trim() !== "") return true;
+  const hasRenderableParts = parts.some((part: any) => {
+    if (part.type === "text") {
+      // If there are tool parts, suppress assistant free text
+      if (hasToolParts) return false;
+      return Boolean(part.text && part.text.trim() !== "");
+    }
     if (part.type === "file") return true;
     if (part.type?.startsWith("tool-")) {
       const toolName = part.type.replace("tool-", "");
@@ -30,7 +37,8 @@ export const PreviewMessage = ({
       if (
         (part.state === "input-streaming" || part.state === "input-available") &&
         (toolName === "get_current_weather" || toolName === "get_satellite_timeline")
-      ) return true;
+      )
+        return true;
     }
     return false;
   });
@@ -57,80 +65,81 @@ export const PreviewMessage = ({
         )}
 
         <div className="flex flex-col gap-2 w-full">
-          {message.parts &&
-            message.parts.map((part: any, index: number) => {
-              if (part.type === "text") {
-                return (
-                  <div key={index} className="flex flex-col gap-4">
-                    <Markdown>{part.text}</Markdown>
-                  </div>
-                );
-              }
-              // Handle tool calls - type is "tool-{toolName}" in AI SDK v5
-              if (part.type?.startsWith("tool-")) {
-                const { toolCallId, state, output } = part;
-                const toolName = part.type.replace("tool-", "");
+          {parts.map((part: any, index: number) => {
+            if (part.type === "text") {
+              // Suppress assistant free text when tool parts are present
+              if (hasToolParts) return null;
+              return (
+                <div key={index} className="flex flex-col gap-4">
+                  <Markdown>{part.text}</Markdown>
+                </div>
+              );
+            }
+            // Handle tool calls - type is "tool-{toolName}" in AI SDK v5
+            if (part.type?.startsWith("tool-")) {
+              const { toolCallId, state, output } = part;
+              const toolName = part.type.replace("tool-", "");
 
-                // Show tool outputs with appropriate components
-                if (state === "output-available" && output) {
-                  if (toolName === "get_current_weather") {
-                    return (
-                      <div key={toolCallId}>
-                        <Weather weatherAtLocation={output} />
-                      </div>
-                    );
-                  }
-                  if (toolName === "get_satellite_timeline") {
-                    // Show the satellite image viewer inline in the chat
-                    return (
-                      <div key={toolCallId} className="space-y-2">
-                        <ToolResult result={output} />
-                        <SatelliteImageViewer
-                          location={output.location}
-                          latitude={output.latitude}
-                          longitude={output.longitude}
-                        />
-                      </div>
-                    );
-                  }
-                  if (toolName === "show_location_on_globe" || toolName === "close_globe") {
-                    return (
-                      <div key={toolCallId}>
-                        <ToolResult result={output} />
-                      </div>
-                    );
-                  }
+              // Show tool outputs with appropriate components
+              if (state === "output-available" && output) {
+                if (toolName === "get_current_weather") {
+                  return (
+                    <div key={toolCallId}>
+                      <Weather weatherAtLocation={output} />
+                    </div>
+                  );
                 }
-                // Show loading state while tool is executing
-                if (
-                  state === "input-streaming" || state === "input-available"
-                ) {
-                  if (toolName === "get_current_weather") {
-                    return (
-                      <div key={toolCallId} className="skeleton">
-                        <Weather />
-                      </div>
-                    );
-                  }
-                  if (toolName === "get_satellite_timeline") {
-                    return (
-                      <div key={toolCallId} className="text-sm text-muted-foreground py-2">
-                        Fetching satellite imagery...
-                      </div>
-                    );
-                  }
+                if (toolName === "get_satellite_timeline") {
+                  // Show the satellite image viewer inline in the chat
+                  return (
+                    <div key={toolCallId} className="space-y-2">
+                      <ToolResult result={output} />
+                      <SatelliteImageViewer
+                        location={output.location}
+                        latitude={output.latitude}
+                        longitude={output.longitude}
+                      />
+                    </div>
+                  );
+                }
+                if (toolName === "show_location_on_globe" || toolName === "close_globe") {
+                  return (
+                    <div key={toolCallId}>
+                      <ToolResult result={output} />
+                    </div>
+                  );
                 }
               }
-              if (part.type === "file") {
-                return (
-                  <PreviewAttachment
-                    key={index}
-                    attachment={part}
-                  />
-                );
+              // Show loading state while tool is executing
+              if (
+                state === "input-streaming" || state === "input-available"
+              ) {
+                if (toolName === "get_current_weather") {
+                  return (
+                    <div key={toolCallId} className="skeleton">
+                      <Weather />
+                    </div>
+                  );
+                }
+                if (toolName === "get_satellite_timeline") {
+                  return (
+                    <div key={toolCallId} className="text-sm text-muted-foreground py-2">
+                      Fetching satellite imagery...
+                    </div>
+                  );
+                }
               }
-              return null;
-            })}
+            }
+            if (part.type === "file") {
+              return (
+                <PreviewAttachment
+                  key={index}
+                  attachment={part}
+                />
+              );
+            }
+            return null;
+          })}
         </div>
       </div>
     </motion.div>

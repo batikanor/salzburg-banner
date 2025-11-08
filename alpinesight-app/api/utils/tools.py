@@ -24,8 +24,9 @@ def get_current_weather(latitude, longitude):
 def show_location_on_globe(location: str, markerColor: str = "red"):
     """
     Shows a location on the interactive globe with a marker.
-    This is a client-side tool that will be handled by the frontend.
-    Return a confirmation so the AI knows the action succeeded.
+    ALWAYS call this tool for EVERY new user request to show/find/locate/display a place, even if the globe is already open or another location was just shown. Do NOT just respond with text like "with a blue marker"—you must invoke this tool so the frontend can update the globe.
+    You can change marker colors if the user asks (red, blue, green, orange, purple).
+    Returns a confirmation for the AI.
     """
     return {
         "status": "success",
@@ -91,7 +92,7 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "show_location_on_globe",
-            "description": "Shows a location on the interactive 3D globe with a marker and zooms to it. Opens the globe if not already open. Use this when the user asks to find, show, locate, or view a place on the map. Examples: 'find Istanbul', 'show me Paris', 'locate Mount Everest'. IMPORTANT: This clears all previous markers, so each call shows only the new location.",
+            "description": "Shows a location on the interactive 3D globe with a marker and zooms to it. ALWAYS call for each new location request even if the globe is open already. Examples: 'show me Paris', 'find Big Ben', 'locate Mount Everest'. IMPORTANT: Each call replaces previous markers (they are cleared). Marker colors allowed: red, blue, green, orange, purple.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -114,7 +115,7 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "close_globe",
-            "description": "Closes the globe view, clears all markers, and returns to full-screen chat. ALWAYS use this when: (1) User asks a new question unrelated to geography/locations, (2) Conversation topic changes from locations to something else, (3) User explicitly asks to close the map. DO NOT use if the user is asking follow-up questions about the same location or related geographic queries.",
+            "description": "Closes the globe view, clears all markers, and returns to full-screen chat. Use when the user explicitly asks to close or changes topic away from locations.",
             "parameters": {
                 "type": "object",
                 "properties": {},
@@ -125,21 +126,21 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "get_satellite_timeline",
-            "description": "Retrieves and displays historical satellite imagery timeline for a specific location using ESRI Wayback imagery archive. ALWAYS call this tool for any request for satellite, historical, or past imagery, even if the globe is open. Examples: 'show satellite images of Paris', 'get historical imagery for Mount Everest', 'how did this area change over the years'. If coordinates are present (e.g. '48.8584 N, 2.2945 E'), you must still call this tool using parsed decimal degrees. Frontend will close the globe automatically.",
+            "description": "Retrieves and displays historical satellite imagery timeline for a specific location using ESRI Wayback imagery archive. ALWAYS call this tool for requests about satellite/historical imagery even if the globe is open. If coordinates are present, parse them.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "location": {
                         "type": "string",
-                        "description": "The name or address of the location (e.g., 'Nordring 57, Cottbus', 'Eiffel Tower', 'Central Park, New York')",
+                        "description": "The name or address of the location (e.g., 'Eiffel Tower', 'Central Park, New York')",
                     },
                     "latitude": {
                         "type": "number",
-                        "description": "The latitude of the location in decimal degrees",
+                        "description": "Latitude in decimal degrees",
                     },
                     "longitude": {
                         "type": "number",
-                        "description": "The longitude of the location in decimal degrees",
+                        "description": "Longitude in decimal degrees",
                     },
                 },
                 "required": ["location", "latitude", "longitude"],
