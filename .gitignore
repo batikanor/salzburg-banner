@@ -5,3 +5,8 @@ test_data/annotated_anything.png
 test_data/sat_1_yolo11s_annotated.png
 test_data/sat_1.png
 test_data/.DS_Store
+alpinesight-app/api/utils/object_detection/yolo11n-obb.pt
+alpinesight-app/api/utils/object_detection/yolov8s-worldv2.pt
+alpinesight-app/api/utils/object_detection/yolov8x.pt
+test_data/sat_1_yolo11_obb.png
+test_data/sat_2.png
