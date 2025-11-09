@@ -480,11 +480,11 @@ export function SatelliteImageViewer({
           className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer disabled:cursor-not-allowed"
         />
         <div className="flex justify-between text-xs text-muted-foreground">
-          <span>{timeline[timeline.length - 1]?.releaseDate}</span>
+          <span>{timeline[0]?.releaseDate}</span>
           <span className="font-medium">
             {currentIndex + 1} / {timeline.length}
           </span>
-          <span>{timeline[0]?.releaseDate}</span>
+          <span>{timeline[timeline.length - 1]?.releaseDate}</span>
         </div>
       </div>
     </div>

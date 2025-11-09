@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createOpenAI } from "@ai-sdk/openai";
+import { generateText } from "ai";
 
 export const runtime = "edge";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
 interface VisionRequest {
@@ -80,34 +81,27 @@ Be conservative - only count objects you're reasonably confident are vehicles. T
 }
 
 async function detectWithOpenAI(imageUrl: string) {
-  // Use OpenRouter if available (same as chat API), otherwise fall back to OpenAI
-  const apiKey = OPENROUTER_API_KEY || OPENAI_API_KEY;
-  const baseUrl = OPENROUTER_API_KEY
-    ? "https://openrouter.ai/api/v1"
-    : "https://api.openai.com/v1";
-  const model = OPENROUTER_API_KEY
-    ? "openai/gpt-5-mini"
-    : "gpt-5-mini";
+  // Configure OpenAI provider based on environment
+  let openai;
+  let modelName;
 
-  if (!apiKey) {
-    throw new Error("OPENAI_API_KEY or OPENROUTER_API_KEY not configured");
+  if (OPENROUTER_API_KEY) {
+    // Local development: Use OpenRouter
+    openai = createOpenAI({
+      apiKey: OPENROUTER_API_KEY,
+      baseURL: "https://openrouter.ai/api/v1",
+    });
+    modelName = "openai/gpt-5-mini"; // OpenRouter format
+  } else {
+    // Production (Vercel): Use Vercel AI Gateway with OIDC
+    openai = createOpenAI({
+      // Vercel AI SDK automatically uses OIDC token on Vercel
+      baseURL: "https://api.openai.com/v1",
+    });
+    modelName = "gpt-5-mini"; // Standard OpenAI format
   }
 
-  const response = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: model,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: `Analyze this satellite/aerial image and count the number of vehicles (cars, trucks, vans) visible.
+  const prompt = `Analyze this satellite/aerial image and count the number of vehicles (cars, trucks, vans) visible.
 
 Please respond in this exact JSON format:
 {
@@ -116,36 +110,34 @@ Please respond in this exact JSON format:
   "description": "<brief description of what you see>"
 }
 
-Be conservative - only count objects you're reasonably confident are vehicles. The image may be blurry or low quality.`,
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: imageUrl,
-              },
-            },
+Be conservative - only count objects you're reasonably confident are vehicles. The image may be blurry or low quality.`;
+
+  try {
+    const { text } = await generateText({
+      model: openai(modelName),
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: prompt },
+            { type: "image", image: imageUrl },
           ],
         },
       ],
-      max_tokens: 1024,
-    }),
-  });
+      maxTokens: 1024,
+    });
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`OpenAI API error: ${error}`);
+    // Parse JSON from response
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error("Failed to parse JSON from response");
+    }
+
+    return JSON.parse(jsonMatch[0]);
+  } catch (error) {
+    console.error("OpenAI vision error:", error);
+    throw new Error(`Vision API error: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
-
-  const data = await response.json();
-  const content = data.choices[0].message.content;
-
-  // Parse JSON from response
-  const jsonMatch = content.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error("Failed to parse JSON from OpenAI response");
-  }
-
-  return JSON.parse(jsonMatch[0]);
 }
 
 export async function POST(request: NextRequest) {
