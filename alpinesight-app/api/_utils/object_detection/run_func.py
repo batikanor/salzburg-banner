@@ -6,7 +6,7 @@ import cv2
 # For now, this falls back to ultralytics in production
 # TODO: Export yolo11n-obb.pt to ONNX for full production support
 try:
-    from api.utils.object_detection.onnx_detector import YOLO_ONNX as YOLO
+    from api._utils.object_detection.onnx_detector import YOLO_ONNX as YOLO
     USE_ONNX = True
 except ImportError:
     from ultralytics import YOLO

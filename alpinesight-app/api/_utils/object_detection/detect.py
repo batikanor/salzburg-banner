@@ -7,7 +7,7 @@ import numpy as np
 
 # Use ONNX Runtime instead of ultralytics for production deployment
 try:
-    from api.utils.object_detection.onnx_detector import YOLO_ONNX as YOLO
+    from api._utils.object_detection.onnx_detector import YOLO_ONNX as YOLO
     USE_ONNX = True
 except ImportError:
     # Fallback to ultralytics for development

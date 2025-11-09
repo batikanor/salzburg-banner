@@ -8,7 +8,7 @@ detection code while using the lightweight ONNX Runtime (~50 MB) instead
 of PyTorch (~571 MB).
 
 Usage:
-    from api.utils.object_detection.onnx_detector import YOLO_ONNX
+    from api._utils.object_detection.onnx_detector import YOLO_ONNX
 
     model = YOLO_ONNX("api/models/yolov8n.onnx")
     results = model.predict(source="image.jpg", conf=0.25)
