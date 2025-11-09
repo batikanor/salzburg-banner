@@ -14,7 +14,7 @@ def count_vehicles_timeseries_simple(
     image_paths,
     dates,
     model_path="yolo11n-obb.pt",
-    conf_thres=0.2,
+    conf_thres=0.02,
     imgsz=1280,
 ):
     """
