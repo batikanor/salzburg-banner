@@ -11,10 +11,10 @@ export const Overview = () => {
       transition={{ delay: 0.5 }}
     >
       <div className="rounded-xl p-6 flex flex-col gap-8 leading-relaxed text-center max-w-xl">
-        <p className="text-lg md:text-5xl text-muted-foreground">
+        <p className="text-lg md:text-5xl">
           <span className="text-amber-800">Alpine</span>sight
         </p>
-        <p>Some caption</p>
+        <p className="text-gray-300">some caption</p>
       </div>
     </motion.div>
   );
