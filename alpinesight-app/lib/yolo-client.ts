@@ -71,7 +71,7 @@ class YOLODetector {
     targetWidth = 640,
     targetHeight = 640
   ): { tensor: ort.Tensor; scale: number; padX: number; padY: number } {
-    const { width, height, data } = imageData;
+    const { width, height } = imageData;
 
     // Calculate scale (letterbox)
     const scale = Math.min(targetWidth / width, targetHeight / height);
