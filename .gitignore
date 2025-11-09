@@ -18,3 +18,8 @@ test_data/sat_4.jpeg
 test_data/sat_5.jpeg
 alpinesight-app/yolov8n.pt
 alpinesight-app/yolo11n-obb.pt
+alpinesight-app/yolo11s-obb.pt
+.gitignore
+test_data/sat_6.jpeg
+test_data/sat_7.jpeg
+alpinesight-app/api/utils/object_detection/yolo11s-obb.pt
