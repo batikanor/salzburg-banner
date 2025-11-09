@@ -16,11 +16,7 @@ export const Overview = () => {
         <p className="text-lg md:text-5xl">
           <span className="text-amber-800">Alpine</span>sight
         </p>
-<<<<<<< HEAD
-        <p>Get intelligent, data supported insgihts that help your business</p>
-=======
-        <p className="text-gray-300">some caption</p>
->>>>>>> f9dde9dde2edce0d4ec967287da7aee24afea4eb
+        <p>Get intelligent, data supported insights that help your business</p>
       </div>
     </motion.div>
   );
