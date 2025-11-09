@@ -8,13 +8,14 @@ __pycache__/
 .venv/
 venv/
 
-# YOLO models
+# YOLO models (training files)
 *.pt
 *.pth
-*.onnx
 
-# Public assets
-public/
+# Public assets (except models needed for deployment)
+public/*
+!alpinesight-app/public/models/
+!alpinesight-app/public/models/*.onnx
 
 # Package manager lockfiles
 package.json

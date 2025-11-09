@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useGlobe } from "@/contexts/globe-context";
+import { detectObjects, Detection } from "@/lib/yolo-client";
 
 interface TimelineItem {
   releaseNum: number;
@@ -22,7 +23,19 @@ interface SatelliteImageViewerProps {
   onAnalysisComplete?: (data: { points: { date: string; count: number }[] }) => void;
 }
 
-interface AnnotationEntry { date: string; boxes: { left: number; top: number; size: number }[] }
+interface BoundingBox {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  class: string;
+  confidence: number;
+}
+
+interface AnnotationEntry {
+  date: string;
+  boxes: BoundingBox[];
+}
 
 export function SatelliteImageViewer({
   location,
@@ -93,24 +106,53 @@ export function SatelliteImageViewer({
       setAnnotationData([]);
       analysisSentRef.current = false; // reset when restarting autoplay
       if (autoplayRef.current) clearTimeout(autoplayRef.current);
-      const play = (index: number) => {
+
+      const play = async (index: number) => {
         setCurrentIndex(index);
-        // Single random red square
-        const box = {
-          left: Math.random() * 80 + 5, // percent
-          top: Math.random() * 80 + 5,
-          size: 30,
-        };
-        setAnnotationData((prev) => {
-          if (prev.find((p) => p.date === timeline[index].releaseDate)) return prev;
-          return [...prev, { date: timeline[index].releaseDate, boxes: [box] }];
-        });
+
+        // Run YOLO detection on the current image
+        const img = document.createElement('img');
+        img.crossOrigin = "anonymous";
+        img.src = timeline[index].tileUrl;
+
+        try {
+          await img.decode();
+
+          // Run detection (lowered confidence threshold for small objects in satellite imagery)
+          const detections = await detectObjects(img, 0.15, 0.45);
+
+          // Convert YOLO detections to bounding boxes (percentage-based)
+          const boxes: BoundingBox[] = detections.map((det: Detection) => ({
+            left: (det.bbox[0] / img.width) * 100,
+            top: (det.bbox[1] / img.height) * 100,
+            width: ((det.bbox[2] - det.bbox[0]) / img.width) * 100,
+            height: ((det.bbox[3] - det.bbox[1]) / img.height) * 100,
+            class: det.class,
+            confidence: det.confidence,
+          }));
+
+          console.log(`🚗 Detected ${boxes.length} objects in ${timeline[index].releaseDate}`);
+
+          setAnnotationData((prev) => {
+            if (prev.find((p) => p.date === timeline[index].releaseDate)) return prev;
+            return [...prev, { date: timeline[index].releaseDate, boxes }];
+          });
+        } catch (error) {
+          console.error("❌ Detection failed:", error);
+          // Add empty boxes on error so we don't block progress
+          setAnnotationData((prev) => {
+            if (prev.find((p) => p.date === timeline[index].releaseDate)) return prev;
+            return [...prev, { date: timeline[index].releaseDate, boxes: [] }];
+          });
+        }
+
         if (index < timeline.length - 1) {
           autoplayRef.current = setTimeout(() => play(index + 1), 800);
         } else {
           setAutoplayDone(true);
         }
       };
+
       play(0);
     }
   }, [timeline, autoplayDone]);
@@ -200,14 +242,20 @@ export function SatelliteImageViewer({
           <p className="text-xs text-white/70">{currentImage.provider}</p>
         </div>
 
-        {/* Random red square overlay */}
+        {/* YOLO Detection Overlay */}
         {annotationData.find((p) => p.date === currentImage.releaseDate) && (
           <div className="absolute inset-0 pointer-events-none">
             {annotationData.find((p) => p.date === currentImage.releaseDate)!.boxes.map((b, i) => (
               <div
                 key={i}
                 className="absolute border-2 border-red-500"
-                style={{ left: `${b.left}%`, top: `${b.top}%`, width: `${b.size}px`, height: `${b.size}px` }}
+                style={{
+                  left: `${b.left}%`,
+                  top: `${b.top}%`,
+                  width: `${b.width}%`,
+                  height: `${b.height}%`,
+                }}
+                title={`${b.class} (${(b.confidence * 100).toFixed(1)}%)`}
               />
             ))}
           </div>

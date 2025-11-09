@@ -74,8 +74,9 @@ next-env.d.ts
 /models/
 /checkpoints/
 
-# Public folder (frontend assets)
-/public/
+# Public folder (frontend assets) - but allow models directory
+/public/*
+!/public/models/
 
 # Package manager files at root level
 /package.json
