@@ -1,0 +1,298 @@
+/**
+ * Client-side YOLO detection using ONNX Runtime Web
+ * Runs inference in the browser using WebAssembly/WebGPU
+ *
+ * Bypasses Vercel's 250MB serverless function limit by running client-side!
+ */
+
+import * as ort from 'onnxruntime-web';
+
+export interface Detection {
+  class: string;
+  confidence: number;
+  bbox: [number, number, number, number]; // [x1, y1, x2, y2]
+}
+
+// COCO class names (YOLOv8 default)
+const COCO_CLASSES = [
+  'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat',
+  'traffic light', 'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird', 'cat',
+  'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'backpack',
+  'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball',
+  'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard', 'tennis racket',
+  'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple',
+  'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake',
+  'chair', 'couch', 'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop',
+  'mouse', 'remote', 'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink',
+  'refrigerator', 'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush'
+];
+
+class YOLODetector {
+  private session: ort.InferenceSession | null = null;
+  private modelLoaded = false;
+
+  /**
+   * Load YOLO ONNX model
+   */
+  async loadModel(modelUrl: string = '/models/yolov8n.onnx'): Promise<void> {
+    if (this.modelLoaded) return;
+
+    console.log('🔄 Loading YOLO model from:', modelUrl);
+
+    try {
+      // Use WebGPU if available, fallback to WASM
+      const executionProviders: ort.ExecutionProviderConfig[] = [];
+
+      if (typeof navigator !== 'undefined' && 'gpu' in navigator) {
+        executionProviders.push('webgpu');
+        console.log('✅ WebGPU available');
+      }
+
+      executionProviders.push('wasm');
+
+      this.session = await ort.InferenceSession.create(modelUrl, {
+        executionProviders,
+      });
+
+      this.modelLoaded = true;
+      console.log('✅ YOLO model loaded successfully');
+      console.log('   Input shape:', this.session.inputNames, this.session.outputNames);
+    } catch (error) {
+      console.error('❌ Failed to load YOLO model:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Preprocess image for YOLO inference
+   */
+  private preprocessImage(
+    imageData: ImageData,
+    targetWidth = 640,
+    targetHeight = 640
+  ): { tensor: ort.Tensor; scale: number; padX: number; padY: number } {
+    const { width, height, data } = imageData;
+
+    // Calculate scale (letterbox)
+    const scale = Math.min(targetWidth / width, targetHeight / height);
+    const scaledWidth = Math.round(width * scale);
+    const scaledHeight = Math.round(height * scale);
+    const padX = Math.floor((targetWidth - scaledWidth) / 2);
+    const padY = Math.floor((targetHeight - scaledHeight) / 2);
+
+    // Create canvas for resizing
+    const canvas = document.createElement('canvas');
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const ctx = canvas.getContext('2d')!;
+
+    // Fill with gray padding
+    ctx.fillStyle = '#808080';
+    ctx.fillRect(0, 0, targetWidth, targetHeight);
+
+    // Draw scaled image
+    ctx.drawImage(
+      this.imageDataToCanvas(imageData),
+      0, 0, width, height,
+      padX, padY, scaledWidth, scaledHeight
+    );
+
+    const resizedData = ctx.getImageData(0, 0, targetWidth, targetHeight);
+
+    // Convert to tensor (CHW format, normalized to [0, 1])
+    const tensorData = new Float32Array(3 * targetHeight * targetWidth);
+    const pixels = resizedData.data;
+
+    for (let i = 0; i < pixels.length; i += 4) {
+      const pixelIndex = i / 4;
+      const r = pixels[i] / 255.0;
+      const g = pixels[i + 1] / 255.0;
+      const b = pixels[i + 2] / 255.0;
+
+      // CHW format
+      tensorData[pixelIndex] = r; // R channel
+      tensorData[targetHeight * targetWidth + pixelIndex] = g; // G channel
+      tensorData[2 * targetHeight * targetWidth + pixelIndex] = b; // B channel
+    }
+
+    const tensor = new ort.Tensor('float32', tensorData, [1, 3, targetHeight, targetWidth]);
+
+    return { tensor, scale, padX, padY };
+  }
+
+  /**
+   * Convert ImageData to Canvas
+   */
+  private imageDataToCanvas(imageData: ImageData): HTMLCanvasElement {
+    const canvas = document.createElement('canvas');
+    canvas.width = imageData.width;
+    canvas.height = imageData.height;
+    const ctx = canvas.getContext('2d')!;
+    ctx.putImageData(imageData, 0, 0);
+    return canvas;
+  }
+
+  /**
+   * Non-Maximum Suppression
+   */
+  private nms(
+    boxes: number[][],
+    scores: number[],
+    iouThreshold: number
+  ): number[] {
+    const indices: number[] = [];
+    const sortedIndices = scores
+      .map((score, idx) => ({ score, idx }))
+      .sort((a, b) => b.score - a.score)
+      .map(item => item.idx);
+
+    while (sortedIndices.length > 0) {
+      const current = sortedIndices.shift()!;
+      indices.push(current);
+
+      const currentBox = boxes[current];
+
+      sortedIndices.splice(0, sortedIndices.length, ...sortedIndices.filter(idx => {
+        const box = boxes[idx];
+        const iou = this.calculateIoU(currentBox, box);
+        return iou <= iouThreshold;
+      }));
+    }
+
+    return indices;
+  }
+
+  /**
+   * Calculate Intersection over Union
+   */
+  private calculateIoU(box1: number[], box2: number[]): number {
+    const [x1_1, y1_1, x2_1, y2_1] = box1;
+    const [x1_2, y1_2, x2_2, y2_2] = box2;
+
+    const x1 = Math.max(x1_1, x1_2);
+    const y1 = Math.max(y1_1, y1_2);
+    const x2 = Math.min(x2_1, x2_2);
+    const y2 = Math.min(y2_1, y2_2);
+
+    const intersection = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+    const area1 = (x2_1 - x1_1) * (y2_1 - y1_1);
+    const area2 = (x2_2 - x1_2) * (y2_2 - y1_2);
+    const union = area1 + area2 - intersection;
+
+    return intersection / union;
+  }
+
+  /**
+   * Run YOLO detection on image
+   */
+  async detect(
+    imageData: ImageData,
+    confThreshold = 0.25,
+    iouThreshold = 0.45
+  ): Promise<Detection[]> {
+    if (!this.session) {
+      throw new Error('Model not loaded. Call loadModel() first.');
+    }
+
+    // Preprocess
+    const { tensor, scale, padX, padY } = this.preprocessImage(imageData);
+
+    // Run inference
+    const startTime = performance.now();
+    const results = await this.session.run({ images: tensor });
+    const inferenceTime = performance.now() - startTime;
+    console.log(`⚡ Inference time: ${inferenceTime.toFixed(2)}ms`);
+
+    // Parse output (YOLOv8 format: [1, 84, 8400])
+    const output = results.output0.data as Float32Array;
+    const outputShape = results.output0.dims; // [1, 84, 8400]
+    const numClasses = 80;
+
+    const detections: Detection[] = [];
+    const boxes: number[][] = [];
+    const scores: number[] = [];
+    const classIds: number[] = [];
+
+    // Parse detections
+    for (let i = 0; i < outputShape[2]; i++) {
+      // Get class scores
+      let maxScore = 0;
+      let maxClass = 0;
+
+      for (let c = 0; c < numClasses; c++) {
+        const score = output[i + (4 + c) * outputShape[2]];
+        if (score > maxScore) {
+          maxScore = score;
+          maxClass = c;
+        }
+      }
+
+      if (maxScore < confThreshold) continue;
+
+      // Get box (xywh -> xyxy)
+      const cx = output[i];
+      const cy = output[i + outputShape[2]];
+      const w = output[i + 2 * outputShape[2]];
+      const h = output[i + 3 * outputShape[2]];
+
+      const x1 = (cx - w / 2 - padX) / scale;
+      const y1 = (cy - h / 2 - padY) / scale;
+      const x2 = (cx + w / 2 - padX) / scale;
+      const y2 = (cy + h / 2 - padY) / scale;
+
+      boxes.push([x1, y1, x2, y2]);
+      scores.push(maxScore);
+      classIds.push(maxClass);
+    }
+
+    // Apply NMS
+    const keepIndices = this.nms(boxes, scores, iouThreshold);
+
+    // Build final detections
+    for (const idx of keepIndices) {
+      detections.push({
+        class: COCO_CLASSES[classIds[idx]] || `class_${classIds[idx]}`,
+        confidence: scores[idx],
+        bbox: boxes[idx] as [number, number, number, number],
+      });
+    }
+
+    console.log(`✅ Found ${detections.length} objects`);
+    return detections;
+  }
+}
+
+// Singleton instance
+let detector: YOLODetector | null = null;
+
+/**
+ * Get or create YOLO detector instance
+ */
+export async function getYOLODetector(): Promise<YOLODetector> {
+  if (!detector) {
+    detector = new YOLODetector();
+    await detector.loadModel();
+  }
+  return detector;
+}
+
+/**
+ * Detect objects in an image element
+ */
+export async function detectObjects(
+  image: HTMLImageElement | HTMLCanvasElement,
+  confThreshold = 0.25,
+  iouThreshold = 0.45
+): Promise<Detection[]> {
+  // Convert to ImageData
+  const canvas = document.createElement('canvas');
+  canvas.width = image.width;
+  canvas.height = image.height;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(image, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  // Run detection
+  const detector = await getYOLODetector();
+  return detector.detect(imageData, confThreshold, iouThreshold);
+}

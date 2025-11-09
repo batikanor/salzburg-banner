@@ -1,17 +1,26 @@
-alpinesight-app/api/utils/object_detection/yolo11s.pt
-alpinesight-app/api/utils/object_detection/yolov8n.pt
-alpinesight-app/api/utils/object_detection/yolov8s.pt
-test_data/annotated_anything.png
-test_data/sat_1_yolo11s_annotated.png
-test_data/sat_1.png
-test_data/.DS_Store
-alpinesight-app/api/utils/object_detection/yolo11n-obb.pt
-alpinesight-app/api/utils/object_detection/yolov8s-worldv2.pt
-alpinesight-app/api/utils/object_detection/yolov8x.pt
-test_data/sat_1_yolo11_obb.png
-test_data/sat_2.png
-test_data/sat_2_yolo11_obb.png
-test_data/sat_3_yolo11_obb.png
-test_data/sat_3.jpeg
-test_data/sat_4_yolo11_obb.png
-test_data/sat_4.jpeg
+# Node modules
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# YOLO models
+*.pt
+*.pth
+*.onnx
+
+# Public assets
+public/
+
+# Package manager lockfiles
+package.json
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# OS files
+.DS_Store

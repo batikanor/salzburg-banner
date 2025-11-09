@@ -1,0 +1,7 @@
+# Lambda-specific requirements for YOLO detection
+# Container images support up to 10GB, so size is not an issue
+
+numpy==2.3.4
+onnxruntime==1.20.1
+opencv-python-headless==4.10.0.84
+Pillow==11.1.0

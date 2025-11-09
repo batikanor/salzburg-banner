@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+node_modules/
 /.pnp
 .pnp.js
 
@@ -72,3 +73,12 @@ next-env.d.ts
 /weights/
 /models/
 /checkpoints/
+
+# Public folder (frontend assets)
+/public/
+
+# Package manager files at root level
+/package.json
+/pnpm-lock.yaml
+/package-lock.json
+/yarn.lock
