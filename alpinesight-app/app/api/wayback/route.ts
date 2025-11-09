@@ -4,6 +4,9 @@ import {
   getWaybackItems,
 } from "@esri/wayback-core";
 
+// Force dynamic rendering for this route (uses request.url)
+export const dynamic = "force-dynamic";
+
 // Helper function to calculate tile coordinates from lat/lng
 function latLngToTile(lat: number, lng: number, zoom: number) {
   const latRad = (lat * Math.PI) / 180;
