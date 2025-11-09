@@ -124,7 +124,6 @@ Be conservative - only count objects you're reasonably confident are vehicles. T
           ],
         },
       ],
-      maxTokens: 1024,
     });
 
     // Parse JSON from response
