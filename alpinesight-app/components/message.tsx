@@ -116,13 +116,52 @@ export const PreviewMessage = ({
                         longitude={output.longitude}
                         onAnalysisComplete={(data) => {
                           if (!setMessages) return;
+
+                          // Generate summary text with business insights
+                          const totalVehicles = data.points.reduce((sum, p) => sum + p.count, 0);
+                          const avgVehicles = Math.round(totalVehicles / data.points.length);
+                          const maxPoint = data.points.reduce((max, p) => p.count > max.count ? p : max, data.points[0]);
+                          const minPoint = data.points.reduce((min, p) => p.count < min.count ? p : min, data.points[0]);
+
+                          let summaryText = `## Analysis Summary for ${data.location}\n\n`;
+                          summaryText += `**Vehicle Traffic Trends:**\n`;
+                          summaryText += `- Analyzed ${data.points.length} historical satellite images\n`;
+                          summaryText += `- Average vehicles detected: ${avgVehicles}\n`;
+                          summaryText += `- Peak activity: ${maxPoint.count} vehicles on ${maxPoint.date}\n`;
+                          summaryText += `- Lowest activity: ${minPoint.count} vehicles on ${minPoint.date}\n\n`;
+
+                          // Add business insights if any
+                          if (data.insights && data.insights.length > 0) {
+                            summaryText += `**Additional Business Insights:**\n`;
+                            data.insights.forEach(insight => {
+                              summaryText += `- ${insight}\n`;
+                            });
+                            summaryText += `\n`;
+                          }
+
+                          // Add contextual interpretation
+                          summaryText += `**What This Means:**\n\n`;
+                          summaryText += `Let's say you're a nearby hotel manager. This analysis suggests:\n\n`;
+
+                          if (maxPoint.count > avgVehicles * 1.5) {
+                            summaryText += `- **Peak Season Indicator**: ${maxPoint.date} shows significantly higher activity (${maxPoint.count} vs ${avgVehicles} avg), which could correlate with high occupancy periods.\n`;
+                          }
+
+                          if (minPoint.count < avgVehicles * 0.5) {
+                            summaryText += `- **Low Season Indicator**: ${minPoint.date} shows much lower activity, potentially indicating off-peak periods when promotional rates might be needed.\n`;
+                          }
+
+                          const trend = data.points[data.points.length - 1].count > data.points[0].count ? "increasing" : "decreasing";
+                          summaryText += `- **Overall Trend**: Visitor traffic appears to be ${trend} over time.\n`;
+                          summaryText += `- **Correlation Opportunity**: Compare these patterns with your hotel occupancy data to identify booking windows and optimize pricing strategies.\n`;
+
                           const msg: UIMessage = {
                             id: `assistant-analysis-${Date.now()}` as any,
                             role: "assistant",
                             parts: [
                               {
                                 type: "text",
-                                text: `Here is a quick summary graph of the red squares I counted across ${data.points.length} images.`,
+                                text: summaryText,
                               } as any,
                               {
                                 type: "chart-satellite-counts",

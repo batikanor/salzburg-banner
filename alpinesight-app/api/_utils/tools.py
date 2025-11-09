@@ -52,9 +52,30 @@ def close_globe():
 
 def get_satellite_timeline(location: str, latitude: float, longitude: float):
     """
-    Retrieves historical satellite imagery timeline for a specific location.
-    ALWAYS call this tool when the user asks for satellite images, historical imagery, wayback imagery, maps over time, changes over time, or anything similar – EVEN IF the interactive globe is currently open or was just used. The frontend will automatically close the globe and display the timeline.
-    If the user provides coordinates (e.g. "48.8584 N, 2.2945 E"), extract them and call this tool. Do not attempt to answer with a description only; the user expects the imagery viewer.
+    Retrieves historical satellite imagery timeline for a specific location and analyzes visitor/traffic patterns using computer vision.
+
+    WHEN TO USE THIS TOOL:
+    - User asks for satellite imagery, historical imagery, wayback imagery, maps over time, or changes over time
+    - User wants to ANALYZE POPULARITY, visitor trends, foot traffic, or activity levels at a location
+    - User mentions TOURISM analysis, occupancy correlation, or business analytics for a location
+    - User wants to check how BUSY a place is, traffic patterns, or crowding over time
+    - User asks about TRENDS or temporal analysis of any location
+
+    EXAMPLES OF REQUESTS THAT SHOULD USE THIS TOOL:
+    ✓ "analyze popularity of Tulfes ski resort"
+    ✓ "check visitor trends at Central Park"
+    ✓ "how busy is Times Square"
+    ✓ "correlate traffic with my hotel occupancy"
+    ✓ "show me activity patterns at the beach"
+    ✓ "is this tourist destination getting more crowded over time"
+
+    IMPORTANT: ALWAYS call this tool for ANY request involving location analysis, popularity, traffic, or trends – EVEN IF the interactive globe is currently open or was just used. The frontend will automatically close the globe and display the satellite timeline with AI-powered vehicle/visitor detection.
+
+    The tool will:
+    1. Fetch historical satellite imagery from ESRI Wayback
+    2. Run AI-powered object detection to count vehicles (proxy for visitor activity)
+    3. Generate a timeline chart showing traffic/popularity trends
+    4. Provide insights for business/tourism analysis
     """
     return {
         "status": "success",
@@ -62,7 +83,7 @@ def get_satellite_timeline(location: str, latitude: float, longitude: float):
         "location": location,
         "latitude": latitude,
         "longitude": longitude,
-        "message": f"Fetching satellite imagery timeline for {location}"
+        "message": f"Analyzing historical visitor patterns and popularity trends for {location} using satellite imagery and AI detection"
     }
 
 
@@ -126,21 +147,21 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "get_satellite_timeline",
-            "description": "Retrieves and displays historical satellite imagery timeline for a specific location using ESRI Wayback imagery archive. ALWAYS call this tool for requests about satellite/historical imagery even if the globe is open. If coordinates are present, parse them.",
+            "description": "Analyzes location popularity, visitor trends, and traffic patterns using historical satellite imagery with AI-powered vehicle detection. Use this tool when users ask to: analyze popularity/traffic/visitors, check how busy a place is, correlate with business metrics (hotel occupancy, tourism), examine trends over time, or view satellite/historical imagery. The tool fetches ESRI Wayback imagery and runs computer vision to count vehicles as a proxy for visitor activity. ALWAYS call this even if globe is open - it will auto-close and show the satellite timeline viewer. Examples: 'analyze popularity of Tulfes', 'check visitor trends at the beach', 'how busy is Times Square', 'correlate with my hotel data'.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "location": {
                         "type": "string",
-                        "description": "The name or address of the location (e.g., 'Eiffel Tower', 'Central Park, New York')",
+                        "description": "The name or address of the location to analyze (e.g., 'Tulfes Glungezerbahn Talstation', 'Eiffel Tower', 'Central Park')",
                     },
                     "latitude": {
                         "type": "number",
-                        "description": "Latitude in decimal degrees",
+                        "description": "Latitude in decimal degrees (required for geocoding)",
                     },
                     "longitude": {
                         "type": "number",
-                        "description": "Longitude in decimal degrees",
+                        "description": "Longitude in decimal degrees (required for geocoding)",
                     },
                 },
                 "required": ["location", "latitude", "longitude"],

@@ -7,6 +7,7 @@ export interface VisionDetection {
   vehicleCount: number;
   confidence: number;
   description: string;
+  businessInsights?: string;
 }
 
 export async function detectVehiclesWithVision(

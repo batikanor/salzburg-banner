@@ -23,6 +23,8 @@ interface SatelliteImageViewerProps {
   // New: callback to append analysis message
   onAnalysisComplete?: (data: {
     points: { date: string; count: number }[];
+    location: string;
+    insights: string[];
   }) => void;
 }
 
@@ -58,6 +60,7 @@ export function SatelliteImageViewer({
   const [detectionMode, setDetectionMode] = useState<"yolo" | "multimodal">("multimodal");
   const [visionProvider, setVisionProvider] = useState<"anthropic" | "openai">("openai");
   const [liveDetectionResult, setLiveDetectionResult] = useState<string | null>(null);
+  const [collectedInsights, setCollectedInsights] = useState<string[]>([]);
 
   // Ensure globe is closed when the satellite viewer mounts (and clear markers)
   const { setIsGlobeOpen, clearMarkers } = useGlobe();
@@ -169,9 +172,20 @@ export function SatelliteImageViewer({
             );
 
             // Show live result with AI's description
+            const insights = result.businessInsights && result.businessInsights !== "No other relatable insights found"
+              ? ` • ${result.businessInsights}`
+              : result.businessInsights === "No other relatable insights found"
+              ? " • No other relatable insights found"
+              : "";
+
             setLiveDetectionResult(
-              `✅ Found ${result.vehicleCount} vehicle${result.vehicleCount !== 1 ? 's' : ''}: ${result.description}`
+              `✅ Found ${result.vehicleCount} vehicle${result.vehicleCount !== 1 ? 's' : ''}: ${result.description}${insights}`
             );
+
+            // Collect business insights for final summary
+            if (result.businessInsights && result.businessInsights !== "No other relatable insights found") {
+              setCollectedInsights(prev => [...prev, `${timeline[index].releaseDate}: ${result.businessInsights}`]);
+            }
 
             // For vision mode, we don't have bounding boxes, just a count
             // We'll create empty boxes array and store count in description
@@ -248,9 +262,13 @@ export function SatelliteImageViewer({
         date: e.date,
         count: e.boxes.length,
       }));
-      onAnalysisComplete({ points });
+      onAnalysisComplete({
+        points,
+        location,
+        insights: collectedInsights,
+      });
     }
-  }, [autoplayDone, annotationData, timeline.length, onAnalysisComplete]);
+  }, [autoplayDone, annotationData, timeline.length, onAnalysisComplete, location, collectedInsights]);
 
   // Cleanup timer
   useEffect(

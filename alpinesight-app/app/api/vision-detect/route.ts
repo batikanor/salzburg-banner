@@ -46,11 +46,20 @@ async function detectWithClaude(imageUrl: string) {
               type: "text",
               text: `Analyze this satellite/aerial image and count the number of vehicles (cars, trucks, vans) visible.
 
+Also look for OTHER INSIGHTS that might be relevant for a nearby hotel or business:
+- Weather conditions (snow, rain, clear skies)
+- Parking lot occupancy
+- Road conditions
+- Construction or development
+- Seasonal indicators (snow cover, foliage)
+- Special events or unusual activity
+
 Please respond in this exact JSON format:
 {
   "vehicleCount": <number>,
   "confidence": <0.0 to 1.0>,
-  "description": "<brief description of what you see>"
+  "description": "<brief description of what you see>",
+  "businessInsights": "<additional insights for nearby businesses, or 'No other relatable insights found' if none>"
 }
 
 Be conservative - only count objects you're reasonably confident are vehicles. The image may be blurry or low quality.`,
@@ -108,11 +117,20 @@ async function detectWithOpenAI(imageUrl: string) {
               type: "text",
               text: `Analyze this satellite/aerial image and count the number of vehicles (cars, trucks, vans) visible.
 
+Also look for OTHER INSIGHTS that might be relevant for a nearby hotel or business:
+- Weather conditions (snow, rain, clear skies)
+- Parking lot occupancy
+- Road conditions
+- Construction or development
+- Seasonal indicators (snow cover, foliage)
+- Special events or unusual activity
+
 Please respond in this exact JSON format:
 {
   "vehicleCount": <number>,
   "confidence": <0.0 to 1.0>,
-  "description": "<brief description of what you see>"
+  "description": "<brief description of what you see>",
+  "businessInsights": "<additional insights for nearby businesses, or 'No other relatable insights found' if none>"
 }
 
 Be conservative - only count objects you're reasonably confident are vehicles. The image may be blurry or low quality.`,

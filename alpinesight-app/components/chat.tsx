@@ -38,7 +38,8 @@ export function Chat() {
   const { messages, setMessages, sendMessage, status, stop } = useChat({
     id: chatId,
     onError: (error: Error) => {
-      console.error("Chat error:", error);
+      // Log all errors to console, but don't show toast notifications to user
+      console.error("❌ Chat error:", error);
 
       // Suppress synthetic tool call errors (these are fallback behaviors and expected)
       if (error.message.includes('synth-')) {
@@ -46,22 +47,54 @@ export function Chat() {
         return;
       }
 
+      // Log error details without showing toast
       if (error.message.match(/Too many requests|429|rate-limited/i)) {
-        toast.error("Rate limit reached. Please wait or use a different model.", { duration: 5000 });
+        console.error("⚠️ Rate limit reached. Please wait or use a different model.");
       } else if (error.message.match(/API|fetch/i)) {
-        toast.error("Connection error. Check your network and retry.", { duration: 5000 });
+        console.error("⚠️ Connection error. Check your network and retry.");
       } else if (error.message.match(/model|Provider/i)) {
-        toast.error(error.message, { duration: 5000 });
+        console.error("⚠️ Model error:", error.message);
       } else {
-        toast.error(`Error: ${error.message}`, { duration: 5000 });
+        console.error("⚠️ Error:", error.message);
       }
+
+      // Don't show toast notifications for errors - only log to console
     },
   });
 
-  // Intent detection
+  // Intent detection - expanded to understand semantic requests
   const hasSatelliteIntent = (text: string) => {
     const t = text.toLowerCase();
-    return t.includes("satellite") || t.includes("historical imagery") || t.includes("historical satellite") || t.includes("wayback") || t.includes("imagery");
+
+    // Direct satellite keywords
+    if (t.includes("satellite") || t.includes("historical imagery") ||
+        t.includes("historical satellite") || t.includes("wayback") ||
+        t.includes("imagery")) {
+      return true;
+    }
+
+    // Semantic analysis keywords (for business/popularity analysis)
+    const analysisKeywords = [
+      "analyze", "analysis", "popularity", "popular", "traffic", "visitor",
+      "busy", "occupancy", "trend", "correlate", "correlation", "foot traffic",
+      "activity", "crowded", "visitors", "tourism", "tourist"
+    ];
+
+    const hasAnalysisKeyword = analysisKeywords.some(keyword => t.includes(keyword));
+
+    // If it has analysis keywords AND mentions a location, it's likely satellite intent
+    if (hasAnalysisKeyword) {
+      // Check if there's a location-like pattern (place names, coordinates, etc.)
+      const hasLocation = /\b(in|at|near|of|for)\s+[A-Z]/i.test(text) || // "in Paris", "at Berlin"
+                          /\d+°?\s*[NS]/.test(text) || // coordinates
+                          /[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*/.test(text); // Capitalized words (place names)
+
+      if (hasLocation) {
+        return true;
+      }
+    }
+
+    return false;
   };
 
   const hasLocationIntent = (text: string) => {
