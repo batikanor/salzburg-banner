@@ -33,4 +33,4 @@ Thanks for helping improve this project!
 ---
 
 ## 🚀 Getting Help
-If you’re stuck, open a **draft PR** or start a **discussion**.
+If you're stuck, open a **draft PR** or start a **discussion**.
